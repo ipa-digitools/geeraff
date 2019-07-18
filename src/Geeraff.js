@@ -1,11 +1,13 @@
-import React from "react";
+import React, { useState } from "react";
 import _ from "lodash";
 import Connector from "./Connector";
+import Draggable from "./Draggable";
+import longestPathLayout from "./Layouts/LongestPath";
+import DragContext from "./DragContext";
+import DropTarget from "./DropTarget";
+//import { findStartNodes } from './Util';
 
-let findStartNodes = graph => {
-  return _.difference(_.keys(graph), _.flatMap(graph, node => node.children));
-};
-
+/*
 let topologicalSort = graph => {
   let associations = _.reduce(
     graph,
@@ -48,7 +50,9 @@ let topologicalSort = graph => {
     return sortedNodes;
   }
 };
+*/
 
+/*
 let layout = (graph, topology) => {
   return _.map(topology, (element, index) => {
     return (
@@ -58,7 +62,9 @@ let layout = (graph, topology) => {
     );
   });
 };
+*/
 
+/*
 let findLongestPath = (graph, startNodes) => {
   if (_.isEmpty(startNodes)) return [];
 
@@ -72,75 +78,57 @@ let findLongestPath = (graph, startNodes) => {
     result.length < path.length ? path : result
   );
 };
-
-let longestPathLayout = graph => {
-  let startNodes = findStartNodes(graph);
-  let longestPath = findLongestPath(graph, startNodes);
-  /*
-  let columns = _.reduce(
-    longestPath,
-    (result, key, index) => {
-      result[key] = index;
-      return result;
-    },
-    {}
-  );
 */
-  /*
-  _.each(graph, (node, key) => {
-    if(columns[key] === undefined){
-      let column = _.reduce(node.children, (result, childKey) => {
-        if(columns[childKey] !== undefined && columns[childKey] < result){
-            return columns[childKey] - 1;
-        }
-        return result;
-      }, _.keys(columns).length);
-      columns[key] = column;
+
+const renderConnections = (graph, layout) => {
+  return _.flatMap(
+    _.filter(
+      _.keys(graph),
+      key => graph[key].children && graph[key].children.length
+    ),
+    key => {
+      return _.map(graph[key].children, childKey => {
+        return (
+          <g key={`${key}-${childKey}-connector`}>
+            {graph[key].graphics.connector(
+              {
+                x: layout[key].x + graph[key].graphics.outputs.x,
+                y: layout[key].y + graph[key].graphics.outputs.y,
+                data: graph[key]
+              },
+              {
+                x: layout[childKey].x + graph[key].graphics.inputs.x,
+                y: layout[childKey].y + graph[key].graphics.inputs.y,
+                data: graph[childKey]
+              },
+              graph
+            )}
+          </g>
+        );
+      });
     }
-  });
-  console.debug(columns);
-  */
-  let _generateColumns = (layer, nodes, graph, result) => {
-    if (_.isEmpty(nodes)) {
-      return {layer: layer, changed: false};
-    }
-    return _.min(
-      _.map(nodes, node => {
-        let generated = _generateColumns(layer + 1, graph[node].children, graph, result);
-        let column = generated.layer - 1;
-        let changed = result[node] !== column;
-        result[node] = column;
-        return {layer: column, changed: generated.changed || changed}; 
-      })
-    );
-  };
+  );
+};
 
-  let generateColumns = graph => {
-    let result = {};
-    let nodes = findStartNodes(graph);
-    while(_generateColumns(0, nodes, graph, result).changed);
-    return result;
-  }
-
-  let generateRows = columns => {
-    let ocupation = {};
-    return _.reduce(columns, (result, column, key) => {
-      if(!_.has(ocupation, column)){
-        ocupation[column] = 0;
-      }
-      result[key] = ocupation[column];
-      ocupation[column] = ocupation[column] + 1;
-      return result;
-    }, {});
-  }
-
-  let columns = generateColumns(graph);
-  let rows = generateRows(columns);
-
+const render = (graph, layout, setLayout) => {
   return _.map(graph, (node, key) => {
-    return <g transform={`translate(${columns[key]*100 + columns[key] * 10},${rows[key]*30 + rows[key] * 10})`}>
-      {node.render()}
-    </g>
+    return (
+      <DropTarget key={key} data={node}>
+        <Draggable
+          moved={position => {
+            let newLayout = _.cloneDeep(layout);
+            newLayout[key] = position;
+            setLayout(newLayout);
+          }}
+          x={layout[key].x}
+          y={layout[key].y}
+          persist={true}
+          data={node}
+        >
+          {node.graphics.render()}
+        </Draggable>
+      </DropTarget>
+    );
   });
 };
 
@@ -153,7 +141,12 @@ export default props => {
         (result, node, index) => {
           let key = nodeType.key(node, index);
           result[key] = {
-            render: () => nodeType.render(node)
+            data: node,
+            type: nodeType.type,
+            key: key,
+            graphics: nodeType.graphics(node),
+            drop: (dragData, dropData) =>
+              nodeType.drop && nodeType.drop(dragData, dropData)
           };
           return result;
         },
@@ -170,16 +163,16 @@ export default props => {
     });
   });
 
-  console.debug(findStartNodes(nodes));
-  let topology = topologicalSort(nodes);
-  console.debug(topology);
   //console.debug(findLongestPath(nodes, findStartNodes(nodes)));
-  console.debug(longestPathLayout(nodes));
+  const [layout, setLayout] = useState(longestPathLayout(nodes));
   //console.debug(findStartNodes(nodes));
   // {layout(nodes, topology)}
   return (
     <svg width="1000px" height="1000px">
-      {longestPathLayout(nodes)}
+      <DragContext>
+        {renderConnections(nodes, layout)}
+        {render(nodes, layout, setLayout)}
+      </DragContext>
     </svg>
   );
 };

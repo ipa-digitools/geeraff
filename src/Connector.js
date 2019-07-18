@@ -1,9 +1,9 @@
 import React from "react";
-import _ from "lodash";
 
 export default props => {
-  console.debug("Rendering connector", props);
+  let length = Math.sqrt(Math.pow(props.startX - props.endX, 2) + Math.pow(props.startY - props.endY, 2));
+  let straight = length / 2;
   return <path d={`M${props.startX} ${props.startY} 
-  C ${props.startX+200} ${props.startY}, ${props.endX-200} ${props.endY}, 
-  ${props.endX} ${props.endY}`} stroke="black" fill="transparent"/>
+  C ${props.startX + straight} ${props.startY}, ${props.endX - straight} ${props.endY}, 
+  ${props.endX} ${props.endY}`} fill="transparent" style={props.style} onClick={props.onClick}/>
 };
