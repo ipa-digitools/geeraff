@@ -1,10 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import _ from "lodash";
-import Connector from "./Connector";
 import Draggable from "./Draggable";
 import longestPathLayout from "./Layouts/LongestPath";
+import forceDirectedLayout from "./Layouts/ForceDirected";
 import DragContext from "./DragContext";
 import DropTarget from "./DropTarget";
+import Connector from "./Connector";
+import PanZoomSVG from "./PanZoomSVG";
 //import { findStartNodes } from './Util';
 
 /*
@@ -80,6 +82,37 @@ let findLongestPath = (graph, startNodes) => {
 };
 */
 
+const defaults = {
+  accessor: node => node, //identity, default to hierarchical data
+  type: "node",
+  children: node => node.connections,
+  key: (node, key) => node.id,
+  graphics: node => {
+    return {
+      bounds: { width: 220, height: 70 },
+      render: () => (
+        <g>
+          <rect width="200" height="50" />
+          <text>{node.name}</text>
+        </g>
+      ),
+      inputs: { x: 0, y: 35 },
+      outputs: { x: 200, y: 35 },
+      connector: (startNode, endNode, graph) => {
+        return (
+          <Connector
+            startX={startNode.x}
+            startY={startNode.y}
+            endX={endNode.x}
+            endY={endNode.y}
+            style={{ strokeWidth: "2px", stroke: "black" }}
+          />
+        );
+      }
+    };
+  }
+};
+
 const renderConnections = (graph, layout) => {
   return _.flatMap(
     _.filter(
@@ -88,6 +121,7 @@ const renderConnections = (graph, layout) => {
     ),
     key => {
       return _.map(graph[key].children, childKey => {
+        if (!layout[key]) return;
         return (
           <g key={`${key}-${childKey}-connector`}>
             {graph[key].graphics.connector(
@@ -112,6 +146,7 @@ const renderConnections = (graph, layout) => {
 
 const render = (graph, layout, setLayout) => {
   return _.map(graph, (node, key) => {
+    if (!layout[key]) return;
     return (
       <DropTarget key={key} data={node}>
         <Draggable
@@ -133,11 +168,15 @@ const render = (graph, layout, setLayout) => {
 };
 
 export default props => {
+  let nodeTypes = props.nodes ? props.nodes : [defaults];
   let nodes = _.reduce(
-    props.nodes,
+    nodeTypes,
     (result, nodeType) => {
+      const accessor = _.isFunction(nodeType.accessor)
+        ? nodeType.accessor
+        : data => data[nodeType.accessor];
       return _.reduce(
-        props.data[nodeType.accessor],
+        accessor(props.data),
         (result, node, index) => {
           let key = nodeType.key(node, index);
           result[key] = {
@@ -155,8 +194,11 @@ export default props => {
     },
     {}
   );
-  _.each(props.nodes, nodeType => {
-    return _.each(props.data[nodeType.accessor], (node, index) => {
+  _.each(nodeTypes, nodeType => {
+    const accessor = _.isFunction(nodeType.accessor)
+      ? nodeType.accessor
+      : data => data[nodeType.accessor];
+    return _.each(accessor(props.data), (node, index) => {
       let key = nodeType.key(node, index);
       let children = _.compact(nodeType.children(node, index, props.data));
       nodes[key].children = children;
@@ -164,15 +206,16 @@ export default props => {
   });
 
   //console.debug(findLongestPath(nodes, findStartNodes(nodes)));
-  const [layout, setLayout] = useState(longestPathLayout(nodes));
+  let [layout, setLayout] = useState(longestPathLayout(nodes));
+  useEffect(() => setLayout(longestPathLayout(nodes, layout)), [props.data]);
   //console.debug(findStartNodes(nodes));
   // {layout(nodes, topology)}
   return (
-    <svg width="1000px" height="1000px">
+    <PanZoomSVG>
       <DragContext>
         {renderConnections(nodes, layout)}
         {render(nodes, layout, setLayout)}
       </DragContext>
-    </svg>
+    </PanZoomSVG>
   );
 };
