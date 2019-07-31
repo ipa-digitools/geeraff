@@ -6,7 +6,7 @@
   "author": "Greg Rauhoeft <greg.rauhoeft@ipa.fraunhofer.de>",
   "license": "MIT",
   "dependencies": {
-    "lodash": "^4.17.11",
+    "lodash": "^4.17.13",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
     "react-scripts": "3.0.1"
