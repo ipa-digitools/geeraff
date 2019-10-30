@@ -1,4 +1,4 @@
-import React, { useRef, useState, useContext } from "react";
+import React, { useRef, useState, useContext, useEffect } from "react";
 import { getTransformedPosition } from "./Util";
 import { DragContext } from "./DragContext";
 
@@ -9,6 +9,8 @@ export default props => {
   };
 
   const [position, setPosition] = useState(initialPosition);
+
+  useEffect(() => setPosition({ x: props.x, y: props.y }));
 
   const container = useRef();
   const context = useContext(DragContext);

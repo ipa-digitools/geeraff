@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
 import _ from "lodash";
 import Draggable from "./Draggable";
-import longestPathLayout from "./Layouts/LongestPath";
-import forceDirectedLayout from "./Layouts/ForceDirected";
+
 import DragContext from "./DragContext";
 import DropTarget from "./DropTarget";
 import Connector from "./Connector";
 import PanZoomSVG from "./PanZoomSVG";
+import treeLayout from "./Layouts/TreeLayout";
 //import { findStartNodes } from './Util';
 
 /*
@@ -131,8 +131,8 @@ const renderConnections = (graph, layout) => {
                 data: graph[key]
               },
               {
-                x: layout[childKey].x + graph[key].graphics.inputs.x,
-                y: layout[childKey].y + graph[key].graphics.inputs.y,
+                x: layout[childKey].x + graph[childKey].graphics.inputs.x,
+                y: layout[childKey].y + graph[childKey].graphics.inputs.y,
                 data: graph[childKey]
               },
               graph
@@ -160,7 +160,7 @@ const render = (graph, layout, setLayout) => {
           persist={true}
           data={node}
         >
-          {node.graphics.render()}
+          {node.graphics.render(node)}
         </Draggable>
       </DropTarget>
     );
@@ -201,21 +201,40 @@ export default props => {
     return _.each(accessor(props.data), (node, index) => {
       let key = nodeType.key(node, index);
       let children = _.compact(nodeType.children(node, index, props.data));
+      _.each(children, child => {
+        if (!nodes[child].parents) { 
+          nodes[child].parents = [];
+        }
+        nodes[child].parents.push(key);
+      });
       nodes[key].children = children;
     });
   });
 
   //console.debug(findLongestPath(nodes, findStartNodes(nodes)));
-  let [layout, setLayout] = useState(longestPathLayout(nodes));
-  useEffect(() => setLayout(longestPathLayout(nodes, layout)), [props.data]);
+  let [layout, setLayout] = useState({});
+  let layouter = props.layout || treeLayout;
+  /*
+  useEffect(() => {
+    setTimeout(() => setLayout(layouter(nodes, layout, setLayout)), 20);
+  });//, [props.data]);
+  */
+  useEffect(() => {
+    setLayout(layouter(nodes, layout, setLayout));
+  }, [props.data]);
+  //console.debug("Rendering!");
   //console.debug(findStartNodes(nodes));
   // {layout(nodes, topology)}
-  return (
-    <PanZoomSVG>
-      <DragContext>
-        {renderConnections(nodes, layout)}
-        {render(nodes, layout, setLayout)}
-      </DragContext>
-    </PanZoomSVG>
-  );
+  if (layout) {
+    return (
+      <PanZoomSVG>
+        <DragContext>
+          {renderConnections(nodes, layout)}
+          {render(nodes, layout, setLayout)}
+        </DragContext>
+      </PanZoomSVG>
+    );
+  } else { 
+    return null;
+  }
 };

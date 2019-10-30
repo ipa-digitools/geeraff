@@ -9,17 +9,19 @@ export default props => {
       persist={false}
       dragged={pos => { setPosition({x: 0, y: 0});}}
       dropped={() => { setPosition(null);}}
-      moved={(offset) => {setPosition({x: props.x-offset.x, y: props.y-offset.y})}}
+      moved={(offset) => {setPosition({x: offset.x - props.x, y: offset.y-props.y})}}
       x={props.x}
       y={props.y}
       data={props.data}
     >
       {(() => {
         if (position) { 
-          return <Connector startX={position.x} startY={position.y} endX={0} endY={0} style={{stroke: "green", strokeWidth: "3px"}}/>
+          return <Connector startX={0} startY={0} endX={position.x} endY={position.y} style={{stroke: "green", strokeWidth: "3px"}}/>
         }
       })()}
-      {props.children}
+      <g transform={position ? `translate(${position.x}, ${position.y})` : "translate(0,0)"}>
+        {props.children}
+      </g>
     </Draggable>
   );
 };

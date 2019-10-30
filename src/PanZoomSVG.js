@@ -67,7 +67,7 @@ export default class PanZoomSVG extends Component{
     }
 
     onWheel(event){
-        event.preventDefault();
+        //event.preventDefault();
         let previousZoomLevel = this.state.zoomLevel;
         let zoomLevel = this.state.zoomLevel + Math.sign(event.deltaY);
         if(zoomLevel < 1) zoomLevel = 1;

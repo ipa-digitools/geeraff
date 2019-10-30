@@ -11,6 +11,10 @@ export const findStartNodes = graph => {
   return _.difference(_.keys(graph), _.flatMap(graph, node => node.children));
 };
 
+export const findEndNodes = graph => { 
+  return _.difference(_.keys(graph), _.flatMap(graph, node => node.parents));
+}
+
 export const getViewBox = (x, y, width, height) => { 
   return `${x} ${y} ${width} ${height}`;
 }
