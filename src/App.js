@@ -4,24 +4,43 @@ import Geeraff from "./Geeraff";
 import _ from "lodash";
 import Handle from "./Handle";
 import Connector from "./Connector";
-import { phylogeny, integrationFlow } from "./test-data";
+import { phylogeny, integrationFlow, newIntegrationFlow } from "./test-data";
 import CenteredText from './CenteredText';
 import { flatten } from './Util';
 import longestPathLayout from "./Layouts/LongestPath";
 import forceDirectedLayout from "./Layouts/ForceDirected";
 import treeLayout from "./Layouts/TreeLayout";
-import { whileStatement } from "@babel/types";
 
 function App() {
   const [tabIndex, setTabIndex] = useState(0);
-
   const getTab = () => {
     switch (tabIndex) {
       case 1: { 
         return <Geeraff
-          layout={treeLayout}
+          layout={forceDirectedLayout}
           data={flatten(phylogeny, node => node.children)}
         />
+      }
+      case 2: {
+        let data = [];
+        let amount = Math.abs(Math.random()) * 20 + 5;
+        for(let i = 0; i < amount; i++) {
+          data.push({id: ""+i, connections: (() => {
+            let connections = [];
+            for(let j = 0; j < Math.abs(Math.random()) * 5; j++){
+              let connection = ""+Math.floor(Math.abs(Math.random()) * amount);
+              if(!_.includes(connections, connection)){
+                connections.push(connection);
+              }
+            }
+            return connections;
+          })()})
+        }
+        console.debug(data);
+        return <Geeraff
+          layout={forceDirectedLayout}
+          data={data}
+          />
       }
       default: {
         const render = (label, data, node) => {
@@ -91,8 +110,8 @@ function App() {
         }
         return (
           <Geeraff
-            data={integrationFlow}
-            layout={treeLayout}
+            data={newIntegrationFlow}
+            layout={forceDirectedLayout}
             nodes={[
               {
                 accessor: "inputParameters",
@@ -142,6 +161,9 @@ function App() {
         </div>
         <div className="button" onClick={() => setTabIndex(1)}>
           Phylogeny
+        </div>
+        <div className="button" onClick={() => setTabIndex(2)}>
+          Random
         </div>
       </div>
       <div className="content">{getTab()}</div>

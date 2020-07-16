@@ -83,11 +83,11 @@ let findLongestPath = (graph, startNodes) => {
 */
 
 const defaults = {
-  accessor: node => node, //identity, default to hierarchical data
+  accessor: (node) => node, //identity, default to hierarchical data
   type: "node",
-  children: node => node.connections,
+  children: (node) => node.connections,
   key: (node, key) => node.id,
-  graphics: node => {
+  graphics: (node) => {
     return {
       bounds: { width: 220, height: 70 },
       render: () => (
@@ -108,19 +108,19 @@ const defaults = {
             style={{ strokeWidth: "2px", stroke: "black" }}
           />
         );
-      }
+      },
     };
-  }
+  },
 };
 
 const renderConnections = (graph, layout) => {
   return _.flatMap(
     _.filter(
       _.keys(graph),
-      key => graph[key].children && graph[key].children.length
+      (key) => graph[key].children && graph[key].children.length
     ),
-    key => {
-      return _.map(graph[key].children, childKey => {
+    (key) => {
+      return _.map(graph[key].children, (childKey) => {
         if (!layout[key]) return;
         return (
           <g key={`${key}-${childKey}-connector`}>
@@ -128,12 +128,12 @@ const renderConnections = (graph, layout) => {
               {
                 x: layout[key].x + graph[key].graphics.outputs.x,
                 y: layout[key].y + graph[key].graphics.outputs.y,
-                data: graph[key]
+                data: graph[key],
               },
               {
                 x: layout[childKey].x + graph[childKey].graphics.inputs.x,
                 y: layout[childKey].y + graph[childKey].graphics.inputs.y,
-                data: graph[childKey]
+                data: graph[childKey],
               },
               graph
             )}
@@ -150,7 +150,7 @@ const render = (graph, layout, setLayout) => {
     return (
       <DropTarget key={key} data={node}>
         <Draggable
-          moved={position => {
+          moved={(position) => {
             let newLayout = _.cloneDeep(layout);
             newLayout[key] = position;
             setLayout(newLayout);
@@ -167,14 +167,14 @@ const render = (graph, layout, setLayout) => {
   });
 };
 
-export default props => {
+export default (props) => {
   let nodeTypes = props.nodes ? props.nodes : [defaults];
   let nodes = _.reduce(
     nodeTypes,
     (result, nodeType) => {
       const accessor = _.isFunction(nodeType.accessor)
         ? nodeType.accessor
-        : data => data[nodeType.accessor];
+        : (data) => data[nodeType.accessor];
       return _.reduce(
         accessor(props.data),
         (result, node, index) => {
@@ -185,7 +185,7 @@ export default props => {
             key: key,
             graphics: nodeType.graphics(node),
             drop: (dragData, dropData) =>
-              nodeType.drop && nodeType.drop(dragData, dropData)
+              nodeType.drop && nodeType.drop(dragData, dropData),
           };
           return result;
         },
@@ -194,15 +194,15 @@ export default props => {
     },
     {}
   );
-  _.each(nodeTypes, nodeType => {
+  _.each(nodeTypes, (nodeType) => {
     const accessor = _.isFunction(nodeType.accessor)
       ? nodeType.accessor
-      : data => data[nodeType.accessor];
+      : (data) => data[nodeType.accessor];
     return _.each(accessor(props.data), (node, index) => {
       let key = nodeType.key(node, index);
       let children = _.compact(nodeType.children(node, index, props.data));
-      _.each(children, child => {
-        if (!nodes[child].parents) { 
+      _.each(children, (child) => {
+        if (!nodes[child].parents) {
           nodes[child].parents = [];
         }
         nodes[child].parents.push(key);
@@ -214,14 +214,23 @@ export default props => {
   //console.debug(findLongestPath(nodes, findStartNodes(nodes)));
   let [layout, setLayout] = useState({});
   let layouter = props.layout || treeLayout;
+  //setLayout(layouter(nodes, layout));
   /*
   useEffect(() => {
-    setTimeout(() => setLayout(layouter(nodes, layout, setLayout)), 20);
   });//, [props.data]);
   */
+  /*
   useEffect(() => {
-    setLayout(layouter(nodes, layout, setLayout));
+    console.debug("Effect");
+    setTimeout(() => setLayout(layouter(nodes, layout, setLayout)), 20);
+    //setLayout(layouter(nodes, layout, setLayout));
   }, [props.data]);
+  */
+  useEffect(() => {
+    let frame = window.requestAnimationFrame(() => setLayout(layouter(nodes, layout)));
+    return () => window.cancelAnimationFrame(frame);
+  });
+
   //console.debug("Rendering!");
   //console.debug(findStartNodes(nodes));
   // {layout(nodes, topology)}
@@ -234,7 +243,7 @@ export default props => {
         </DragContext>
       </PanZoomSVG>
     );
-  } else { 
+  } else {
     return null;
   }
 };

@@ -52,3 +52,7 @@ export const flatten = (data, childAccessor, index, parentId) => {
     return _.concat(data, _.flatMap(childAccessor(data), (child, key) =>flatten(child, childAccessor, index+1+key, data.id)));
   }
 };
+
+export const getCenter = node => {
+  return {x: node.graphics.bounds.width / 2, y: node.graphics.bounds.height / 2};
+};
