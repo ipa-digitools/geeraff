@@ -2,6 +2,15 @@ import _ from "lodash";
 import { findStartNodes, getCenter } from "../Util";
 import { length, subtract, scalarMultiply, add, distance, unit} from "../Vector";
 
+/* 
+Implementation of force directed layout of graphs.
+Adapted from:
+Fruchterman, T.M. and Reingold, E.M., 1991. 
+Graph drawing by force‐directed placement. 
+Software: Practice and experience, 21(11), 
+pp.1129-1164.
+*/
+
 const defaults = {
   bounds: {
     x: 0,
