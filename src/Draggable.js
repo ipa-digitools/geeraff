@@ -2,10 +2,10 @@ import React, { useRef, useState, useContext, useEffect } from "react";
 import { getTransformedPosition } from "./Util";
 import { DragContext } from "./DragContext";
 
-export default props => {
+export default (props) => {
   const initialPosition = {
     x: props.x || 0,
-    y: props.y || 0
+    y: props.y || 0,
   };
 
   const [position, setPosition] = useState(initialPosition);
@@ -17,7 +17,7 @@ export default props => {
 
   let mousePosition;
 
-  const mouseDown = event => {
+  const mouseDown = (event) => {
     event.preventDefault();
     event.stopPropagation();
     document.addEventListener("mousemove", mouseMove);
@@ -27,7 +27,7 @@ export default props => {
     context.setDragData(props.data);
   };
 
-  let mouseUp = event => {
+  let mouseUp = (event) => {
     event.preventDefault();
     event.stopPropagation();
     document.removeEventListener("mouseup", mouseUp);
@@ -40,30 +40,31 @@ export default props => {
     }
   };
 
-  const mouseMove = event => {
+  const mouseMove = (event) => {
     event.preventDefault();
     event.stopPropagation();
     if (!mousePosition) {
       mousePosition = { x: event.clientX, y: event.clientY };
     }
+    if (props.draggable) {
+      const svg = container.current.viewportElement;
+      let oldPosition = getTransformedPosition(mousePosition, svg);
+      let currentPosition = getTransformedPosition(
+        { x: event.clientX, y: event.clientY },
+        svg
+      );
+      let offset = {
+        x: currentPosition.x - oldPosition.x,
+        y: currentPosition.y - oldPosition.y,
+      };
+      let newPosition = {
+        x: initialPosition.x + offset.x,
+        y: initialPosition.y + offset.y,
+      };
 
-    const svg = container.current.viewportElement;
-    let oldPosition = getTransformedPosition(mousePosition, svg);
-    let currentPosition = getTransformedPosition(
-      { x: event.clientX, y: event.clientY },
-      svg
-    );
-    let offset = {
-      x: currentPosition.x - oldPosition.x,
-      y: currentPosition.y - oldPosition.y
+      props.moved && props.moved(newPosition, offset);
+      setPosition(newPosition);
     }
-    let newPosition = {
-      x: initialPosition.x + offset.x,
-      y: initialPosition.y + offset.y 
-    };
-
-    props.moved && props.moved(newPosition, offset);
-    setPosition(newPosition);
   };
 
   return (

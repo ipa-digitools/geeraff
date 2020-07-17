@@ -11,7 +11,7 @@ Software: Practice and experience, 21(11),
 pp.1129-1164.
 */
 
-const defaults = {
+export const defaults = {
   bounds: {
     x: 0,
     y: 0,
@@ -54,15 +54,22 @@ export default (graph, layout, customOptions) => {
   /* Initialize the layout on first run */
   layout = _.cloneDeep(layout);
   if (!layout) {
-    layout = {};
+    layout = {
+      positions: {},
+      values: {}
+    };
   }
   /* Find removed nodes */
-  let removed = _.difference(_.keys(layout), _.keys(graph));
+  let removed = _.difference(_.keys(layout.positions), _.keys(graph));
   /* Find newly added nodes */
-  let added = _.difference(_.keys(graph), _.keys(layout));
-  _.each(removed, (key) => _.unset(layout, key));
+  let added = _.difference(_.keys(graph), _.keys(layout.positions));
+
+  /* Remove removed nodes from layout. */
+  _.each(removed, (key) => _.unset(layout.positions, key));
+
+  /* Initialize newly added nodes. */
   _.each(added, (key) => {
-    layout[key] = { x: random() * options.bounds.width, y: random() * options.bounds.height };
+    layout.positions[key] = { x: random() * options.bounds.width, y: random() * options.bounds.height };
   });
 
   /*
@@ -85,8 +92,8 @@ export default (graph, layout, customOptions) => {
       if (key === otherKey) return; // Node is self, skip
       let isChild = _.includes(node.parents, otherKey);
       let isParent = _.includes(node.children, otherKey);
-      let center = add(layout[key], getCenter(node));
-      let otherCenter = add(layout[otherKey], getCenter(otherNode));
+      let center = add(layout.positions[key], getCenter(node));
+      let otherCenter = add(layout.positions[otherKey], getCenter(otherNode));
       
       if (isParent || isChild) {
         velocities[key] = add(
@@ -105,8 +112,9 @@ export default (graph, layout, customOptions) => {
       );
     });
   });
-  layout = _.reduce(
-    layout,
+
+  layout.positions = _.reduce(
+    layout.positions,
     (acc, value, key) => {
       let position = add(
         value,
@@ -126,5 +134,6 @@ export default (graph, layout, customOptions) => {
     },
     {}
   );
+
   return layout;
 };

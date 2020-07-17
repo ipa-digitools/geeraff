@@ -87,6 +87,7 @@ const defaults = {
   type: "node",
   children: (node) => node.connections,
   key: (node, key) => node.id,
+  draggable: true,
   graphics: (node) => {
     return {
       bounds: { width: 220, height: 70 },
@@ -121,18 +122,18 @@ const renderConnections = (graph, layout) => {
     ),
     (key) => {
       return _.map(graph[key].children, (childKey) => {
-        if (!layout[key]) return;
+        if (!layout.positions[key]) return;
         return (
           <g key={`${key}-${childKey}-connector`}>
             {graph[key].graphics.connector(
               {
-                x: layout[key].x + graph[key].graphics.outputs.x,
-                y: layout[key].y + graph[key].graphics.outputs.y,
+                x: layout.positions[key].x + graph[key].graphics.outputs.x,
+                y: layout.positions[key].y + graph[key].graphics.outputs.y,
                 data: graph[key],
               },
               {
-                x: layout[childKey].x + graph[childKey].graphics.inputs.x,
-                y: layout[childKey].y + graph[childKey].graphics.inputs.y,
+                x: layout.positions[childKey].x + graph[childKey].graphics.inputs.x,
+                y: layout.positions[childKey].y + graph[childKey].graphics.inputs.y,
                 data: graph[childKey],
               },
               graph
@@ -146,19 +147,20 @@ const renderConnections = (graph, layout) => {
 
 const render = (graph, layout, setLayout) => {
   return _.map(graph, (node, key) => {
-    if (!layout[key]) return;
+    if (!layout.positions[key]) return;
     return (
       <DropTarget key={key} data={node}>
         <Draggable
           moved={(position) => {
             let newLayout = _.cloneDeep(layout);
-            newLayout[key] = position;
+            newLayout.positions[key] = position;
             setLayout(newLayout);
           }}
-          x={layout[key].x}
-          y={layout[key].y}
+          x={layout.positions[key].x}
+          y={layout.positions[key].y}
           persist={true}
           data={node}
+          draggable={node.draggable}
         >
           {node.graphics.render(node)}
         </Draggable>
@@ -169,6 +171,7 @@ const render = (graph, layout, setLayout) => {
 
 export default (props) => {
   let nodeTypes = props.nodes ? props.nodes : [defaults];
+  let options = props.layoutOptions || {};
   let nodes = _.reduce(
     nodeTypes,
     (result, nodeType) => {
@@ -183,6 +186,7 @@ export default (props) => {
             data: node,
             type: nodeType.type,
             key: key,
+            draggable: nodeType.draggable,
             graphics: nodeType.graphics(node),
             drop: (dragData, dropData) =>
               nodeType.drop && nodeType.drop(dragData, dropData),
@@ -195,6 +199,7 @@ export default (props) => {
     {}
   );
   _.each(nodeTypes, (nodeType) => {
+    _.defaultsDeep(nodeType, defaults);
     const accessor = _.isFunction(nodeType.accessor)
       ? nodeType.accessor
       : (data) => data[nodeType.accessor];
@@ -211,29 +216,14 @@ export default (props) => {
     });
   });
 
-  //console.debug(findLongestPath(nodes, findStartNodes(nodes)));
-  let [layout, setLayout] = useState({});
+  let [layout, setLayout] = useState(null);
   let layouter = props.layout || treeLayout;
-  //setLayout(layouter(nodes, layout));
-  /*
+  
   useEffect(() => {
-  });//, [props.data]);
-  */
-  /*
-  useEffect(() => {
-    console.debug("Effect");
-    setTimeout(() => setLayout(layouter(nodes, layout, setLayout)), 20);
-    //setLayout(layouter(nodes, layout, setLayout));
-  }, [props.data]);
-  */
-  useEffect(() => {
-    let frame = window.requestAnimationFrame(() => setLayout(layouter(nodes, layout)));
+    let frame = window.requestAnimationFrame(() => setLayout(layouter(nodes, layout, options)));
     return () => window.cancelAnimationFrame(frame);
   });
 
-  //console.debug("Rendering!");
-  //console.debug(findStartNodes(nodes));
-  // {layout(nodes, topology)}
   if (layout) {
     return (
       <PanZoomSVG>
