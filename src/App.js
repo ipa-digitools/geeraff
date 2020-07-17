@@ -27,7 +27,7 @@ function App() {
         for(let i = 0; i < amount; i++) {
           data.push({id: ""+i, connections: (() => {
             let connections = [];
-            for(let j = 0; j < Math.abs(Math.random()) * 5; j++){
+            for(let j = 0; j < Math.abs(Math.random()) * 2; j++){
               let connection = ""+Math.floor(Math.abs(Math.random()) * amount);
               if(!_.includes(connections, connection)){
                 connections.push(connection);
@@ -36,7 +36,6 @@ function App() {
             return connections;
           })()})
         }
-        console.debug(data);
         return <Geeraff
           layout={forceDirectedLayout}
           data={data}

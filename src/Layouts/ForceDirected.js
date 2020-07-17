@@ -1,75 +1,64 @@
 import _ from "lodash";
 import { findStartNodes, getCenter } from "../Util";
+import { length, subtract, scalarMultiply, add, distance, unit} from "../Vector";
 
-export default (graph, layout, setLayout) => {
+const defaults = {
+  bounds: {
+    x: 0,
+    y: 0,
+    width: 2000,
+    height: 2000
+  },
+  maxVelocity: 10,
+  coolingFactor: 0.99
+};
+
+export default (graph, layout, customOptions) => {
+  let options = _.defaultsDeep(customOptions, defaults);
   let random = () => Math.random();
-  const invert = (a) => {
-    return { x: -a.x, y: -a.y };
-  };
-  const length = (a) => Math.sqrt(a.x * a.x + a.y * a.y);
-  const subtract = (a, b) => {
-    return { x: a.x - b.x, y: a.y - b.y };
-  };
-  const multiply = (a, b) => {
-    return { x: a.x * b.x, y: a.y * b.y };
-  };
-  const add = (a, b) => {
-    return { x: a.x + b.x, y: a.y + b.y };
-  };
-  const scalarMultiply = (a, s) => {
-    return { x: a.x * s, y: a.y * s };
-  };
-  const scalarDivide = (a, s) => {
-    return { x: a.x / s, y: a.y / s };
-  };
-  const distance = (a, b) => length(subtract(a, b));
-  const unit = (a) => {
-    const l = length(a);
-    if (l < 0.0001) {
-      return { x: 0, y: 0 };
-    }
-    return { x: a.x / l, y: a.y / l };
-  };
-  const repulse = (node, other, c, l) => {
+  
+  /* Calculate the repulsive force between nodes, based on 
+  Fruchterman & Reingold 1991 */
+  const repulse = (node, other, l) => {
     let d = distance(node, other);
     if (d) {
-      //return multiply(unit(subtract(node, other)), scalarMultiply(scalarDivide(c, Math.pow(d, 2)), l));
       return scalarMultiply(unit(subtract(node, other)), (l * l) / d);
     } else {
       return { x: 0, y: 0 };
     }
   };
-  const attract = (node, other, c, l) => {
+
+  /* Calculate the attractive force between nodes, based on 
+  Fruchterman & Reingold 1991 */
+  const attract = (node, other, l) => {
     let d = distance(node, other);
     if (l > 0) {
-      //return multiply(unit(subtract(other, node)), scalarMultiply(c, Math.log10(d / l)));
       return scalarMultiply(unit(subtract(other, node)), (d * d) / l);
     } else {
       return { x: 0, y: 0 };
     }
   };
+
+  /* Find all nodes that do not have a parent */
   let startNodes = findStartNodes(graph);
+
+  /* Initialize the layout on first run */
   layout = _.cloneDeep(layout);
   if (!layout) {
     layout = {};
   }
+  /* Find removed nodes */
   let removed = _.difference(_.keys(layout), _.keys(graph));
+  /* Find newly added nodes */
   let added = _.difference(_.keys(graph), _.keys(layout));
   _.each(removed, (key) => _.unset(layout, key));
-  let parentCount = 0;
   _.each(added, (key) => {
-    /*
-    let hasParents = graph[key].parents; 
-    if(hasParents){
-      layout[key] = { x: Math.abs(random() * 200), y: Math.abs(random() * 200)}
-    } else {
-      layout[key] = {x: 0, y: parentCount * 200};
-      parentCount++;
-    }
-    */
-    layout[key] = { x: random() * 800, y: random() * 800 };
+    layout[key] = { x: random() * options.bounds.width, y: random() * options.bounds.height };
   });
 
+  /*
+  Initialize velocities
+  */
   let velocities = _.reduce(
     graph,
     (acc, element, key) => {
@@ -79,6 +68,9 @@ export default (graph, layout, setLayout) => {
     {}
   );
 
+  /*
+  Calculate velocities of nodes
+  */
   _.each(graph, (node, key) => {
     _.each(graph, (otherNode, otherKey) => {
       if (key === otherKey) return; // Node is self, skip
@@ -86,67 +78,36 @@ export default (graph, layout, setLayout) => {
       let isParent = _.includes(node.children, otherKey);
       let center = add(layout[key], getCenter(node));
       let otherCenter = add(layout[otherKey], getCenter(otherNode));
-      /*
-      let bias = {x: 500, y: 500};
-      if (isParent) {
-        bias = {x: 50, y: 50};
-        velocities[key] = add(velocities[key], attract(add(layout[key], center), add(layout[otherKey], otherCenter), bias, 1));
-      } else if(isChild) {
-        velocities[key] = add(velocities[key], attract(add(layout[key], center), add(layout[otherKey], otherCenter), bias, 1));
-      } else {
-        velocities[key] = add(velocities[key], repulse(add(layout[key], center), add(layout[otherKey], otherCenter), bias, 1));
-      }*/
+      
       if (isParent || isChild) {
         velocities[key] = add(
           velocities[key],
-          attract(center, otherCenter, 0, 200)
+          attract(center, otherCenter, node.graphics.bounds.width)
         );
-        
         velocities[otherKey] = add(
           velocities[otherKey],
-          attract(otherCenter, center, 0, 200)
+          attract(otherCenter, center, otherNode.graphics.bounds.width)
         );
-        /*
-        velocities[otherKey] = add(
-          velocities[otherKey],
-          attract(otherCenter, center, 0, 200)
-        );
-        */
       }
-      /*if (isChild) {
-        velocities[key] = add(velocities[key], attract(add(layout[key], center), add(layout[otherKey], otherCenter), 0, 200));
-      } */
 
       velocities[key] = add(
         velocities[key],
-        repulse(center, otherCenter, 0, 200)
+        repulse(center, otherCenter, node.graphics.bounds.width)
       );
-      //velocities[key] = add(velocities[key], repulse(add(layout[otherKey], otherCenter), add(layout[key], center), 0, 200));
     });
   });
   layout = _.reduce(
     layout,
     (acc, value, key) => {
-      /*
-      if(!_.includes(startNodes, key)){
-      acc[key] = add(value, velocities[key]);
-      } else {
-        acc[key] = value;
-      }
-      */
-      //acc[key] = add(value, unit(velocities[key]));
-      
       let position = add(
         value,
-        //velocities[key]
-        
         scalarMultiply(
           unit(velocities[key]),
-          Math.min(length(velocities[key]), 10)
+          Math.min(length(velocities[key]), options.maxVelocity)
         )
-      ); //add(value, velocities[key]);
-      position.x = Math.min(4000, Math.max(0, position.x));
-      position.y = Math.min(1000, Math.max(0, position.y));
+      ); 
+      position.x = Math.min(options.bounds.width, Math.max(options.bounds.x, position.x));
+      position.y = Math.min(options.bounds.height, Math.max(options.bounds.y, position.y));
       if(!_.includes(startNodes, key)){
         acc[key] = position;
       } else {
