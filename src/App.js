@@ -5,50 +5,70 @@ import _ from "lodash";
 import Handle from "./Handle";
 import Connector from "./Connector";
 import { phylogeny, integrationFlow, newIntegrationFlow } from "./test-data";
-import CenteredText from './CenteredText';
-import { flatten } from './Util';
+import CenteredText from "./CenteredText";
+import { flatten } from "./Util";
 import longestPathLayout from "./Layouts/LongestPath";
 import forceDirectedLayout from "./Layouts/ForceDirected";
 import treeLayout from "./Layouts/TreeLayout";
+import Gradient from "./Gradient";
 
 function App() {
   const [tabIndex, setTabIndex] = useState(0);
   const getTab = () => {
     switch (tabIndex) {
-      case 1: { 
-        return <Geeraff
-          layout={forceDirectedLayout}
-          data={flatten(phylogeny, node => node.children)}
-        />
+      case 1: {
+        return (
+          <Geeraff
+            layout={forceDirectedLayout}
+            data={flatten(phylogeny, (node) => node.children)}
+          />
+        );
       }
       case 2: {
         let data = [];
         let amount = Math.abs(Math.random()) * 20 + 5;
-        for(let i = 0; i < amount; i++) {
-          data.push({id: ""+i, connections: (() => {
-            let connections = [];
-            for(let j = 0; j < Math.abs(Math.random()) * 2; j++){
-              let connection = ""+Math.floor(Math.abs(Math.random()) * amount);
-              if(!_.includes(connections, connection)){
-                connections.push(connection);
+        for (let i = 0; i < amount; i++) {
+          data.push({
+            id: "" + i,
+            connections: (() => {
+              let connections = [];
+              for (let j = 0; j < Math.abs(Math.random()) * 2; j++) {
+                let connection =
+                  "" + Math.floor(Math.abs(Math.random()) * amount);
+                if (!_.includes(connections, connection)) {
+                  connections.push(connection);
+                }
               }
-            }
-            return connections;
-          })()})
+              return connections;
+            })(),
+          });
         }
-        return <Geeraff
-          layout={forceDirectedLayout}
-          data={data}
-          />
+        return <Geeraff layout={forceDirectedLayout} data={data} />;
       }
       default: {
         const render = (label, data, node) => {
           return (
             <g>
               <g>
-                <rect width="200" height="120" rx="5" ry="5" fill="white" stroke="grey" strokeWidth="0.4"/>
-                <rect width="200" height="24" fill="white" stroke="orange" strokeWidth="0.4"/>
-                <CenteredText style={{fill: "grey", fontSize: 12}}>{label}</CenteredText>
+                <rect
+                  width="200"
+                  height="100"
+                  rx="5"
+                  ry="5"
+                  fill="white"
+                  stroke="grey"
+                  strokeWidth="0.4"
+                />
+                <rect
+                  width="200"
+                  height="24"
+                  fill="white"
+                  stroke="orange"
+                  strokeWidth="0.4"
+                />
+                <CenteredText style={{ fill: "grey", fontSize: 12 }}>
+                  {label}
+                </CenteredText>
               </g>
               <Handle x={200} y={60} data={data}>
                 <circle cx={0} cy={0} r={10} />
@@ -58,8 +78,8 @@ function App() {
         };
         const draw = (label, data) => {
           return {
-            bounds: { width: 200, height: 120 },
-            render: node => render(label, data, node),
+            bounds: { width: 200, height: 100 },
+            render: (node) => render(label, data, node),
             outputs: { x: 200, y: 60 },
             inputs: { x: 0, y: 60 },
             connector: (startNode, endNode, graph) => {
@@ -69,29 +89,37 @@ function App() {
                   startY={startNode.y}
                   endX={endNode.x}
                   endY={endNode.y}
-                  style={{ strokeWidth: "0.5", stroke: "grey" }}
+                  style={{ strokeWidth: "50", stroke: "grey" }}
                   onClick={() => console.debug(startNode, endNode, graph)}
                 >
-                  <circle cx={0} cy={0} r={10}/>
+                  <circle cx={0} cy={0} r={10} />
                 </Connector>
               );
-            }
+            },
           };
         };
-        const drawProcessor = (label, data) => { 
+        const drawProcessor = (label, data) => {
           return {
             bounds: {
-              width: 70, 
+              width: 70,
               height: 70,
             },
             outputs: { x: 70, y: 35 },
             inputs: { x: 0, y: 35 },
-            render: node => { 
+            render: (node) => {
               return (
                 <g>
-                  <rect transform="rotate(45 35 35)" width="70" height="70" rx="5" ry="5" stroke="grey" strokeWidth="0.2" fill="white"/>
+                  <rect
+                    width="70"
+                    height="70"
+                    rx="5"
+                    ry="5"
+                    stroke="grey"
+                    strokeWidth="0.2"
+                    fill="white"
+                  />
                 </g>
-              )
+              );
             },
             connector: (startNode, endNode, graph) => {
               return (
@@ -100,51 +128,74 @@ function App() {
                   startY={startNode.y}
                   endX={endNode.x}
                   endY={endNode.y}
-                  style={{ strokeWidth: "0.5", stroke: "grey" }}
+                  style={{ strokeWidth: "50", stroke: "gray" }}
                   onClick={() => console.debug(startNode, endNode, graph)}
                 />
               );
-            }
-          }
-        }
+            },
+          };
+        };
         return (
           <Geeraff
+            defs={"none"}
             data={newIntegrationFlow}
             layout={forceDirectedLayout}
+            options={{
+              grid: {
+                spacing: { x: 20, y: 20 },
+                emphasis: { x: 100, y: 100 },
+                style: {
+                  minor: {
+                    stroke: "gray",
+                    strokeWidth: "0.2",
+                  },
+                  major: {
+                    stroke: "gray",
+                    strokeWidt: "1",
+                  },
+                },
+              },
+              bounds: {
+                x: 0,
+                y: 0,
+                width: 2000,
+                height: 1000,
+              },
+            }}
             nodes={[
               {
                 accessor: "inputParameters",
                 type: "inputParameter",
                 children: (node, key, data) => {
-                  return _.map(node.processors, processorId => {
+                  return _.map(node.processors, (processorId) => {
                     return "processor-" + processorId;
                   });
                 },
                 key: (node, key) => "input-parameter-" + key,
-                graphics: node => draw("Input Parameter " + node.id, node),
-                drop: (dragData, dropData) => console.debug(dragData, dropData)
+                graphics: (node) => draw("Input Parameter " + node.id, node),
+                drop: (dragData, dropData) => console.debug(dragData, dropData),
               },
               {
                 accessor: "processors",
                 type: "processor",
                 children: (node, key, data) => {
                   return [
-                    node.output ? "output-parameter-" + node.output : null
+                    node.output ? "output-parameter-" + node.output : null,
                   ];
                 },
                 key: (node, key) => "processor-" + key,
                 //graphics: node => draw(node.className, node),
-                graphics: node => drawProcessor(node.className, node),                
-                drop: (dragData, dropData) => console.debug(dragData, dropData)
+                graphics: (node) => drawProcessor(node.className, node),
+                drop: (dragData, dropData) => console.debug(dragData, dropData),
               },
               {
                 accessor: "outputParameters",
                 type: "outputParameter",
                 children: () => null,
                 key: (node, key) => "output-parameter-" + key,
-                graphics: node => draw("Output Parameter " + node.id, node),
-                drop: (dragData, dropData) => console.debug(dragData, dropData)
-              }
+                graphics: (node) => draw("Output Parameter " + node.id, node),
+                drop: (dragData, dropData) => console.debug(dragData, dropData),
+              },
             ]}
           />
         );

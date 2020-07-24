@@ -7,6 +7,7 @@ import DropTarget from "./DropTarget";
 import Connector from "./Connector";
 import PanZoomSVG from "./PanZoomSVG";
 import treeLayout from "./Layouts/TreeLayout";
+import Grid from "./Grid";
 //import { findStartNodes } from './Util';
 
 /*
@@ -82,7 +83,7 @@ let findLongestPath = (graph, startNodes) => {
 };
 */
 
-const defaults = {
+const defaultNode = {
   accessor: (node) => node, //identity, default to hierarchical data
   type: "node",
   children: (node) => node.connections,
@@ -114,6 +115,17 @@ const defaults = {
   },
 };
 
+const defaults = {
+  grid: {
+    spacing: { x: 20, y: 20 },
+    emphasis: { x: 100, y: 100}
+  },
+  bounds: {
+    width: 2000,
+    height: 1000,
+  },
+};
+
 const renderConnections = (graph, layout) => {
   return _.flatMap(
     _.filter(
@@ -132,8 +144,12 @@ const renderConnections = (graph, layout) => {
                 data: graph[key],
               },
               {
-                x: layout.positions[childKey].x + graph[childKey].graphics.inputs.x,
-                y: layout.positions[childKey].y + graph[childKey].graphics.inputs.y,
+                x:
+                  layout.positions[childKey].x +
+                  graph[childKey].graphics.inputs.x,
+                y:
+                  layout.positions[childKey].y +
+                  graph[childKey].graphics.inputs.y,
                 data: graph[childKey],
               },
               graph
@@ -145,7 +161,8 @@ const renderConnections = (graph, layout) => {
   );
 };
 
-const render = (graph, layout, setLayout) => {
+const render = (graph, layout, setLayout, options) => {
+  options = _.defaultsDeep(options, defaults);
   return _.map(graph, (node, key) => {
     if (!layout.positions[key]) return;
     return (
@@ -161,6 +178,7 @@ const render = (graph, layout, setLayout) => {
           persist={true}
           data={node}
           draggable={node.draggable}
+          grid={options.grid.spacing}
         >
           {node.graphics.render(node)}
         </Draggable>
@@ -170,11 +188,12 @@ const render = (graph, layout, setLayout) => {
 };
 
 export default (props) => {
-  let nodeTypes = props.nodes ? props.nodes : [defaults];
-  let options = props.layoutOptions || {};
+  let nodeTypes = props.nodes ? props.nodes : [defaultNode];
+  let options = props.options || {};
   let nodes = _.reduce(
     nodeTypes,
     (result, nodeType) => {
+      _.defaultsDeep(nodeType, defaultNode);
       const accessor = _.isFunction(nodeType.accessor)
         ? nodeType.accessor
         : (data) => data[nodeType.accessor];
@@ -218,18 +237,21 @@ export default (props) => {
 
   let [layout, setLayout] = useState(null);
   let layouter = props.layout || treeLayout;
-  
+
   useEffect(() => {
-    let frame = window.requestAnimationFrame(() => setLayout(layouter(nodes, layout, options)));
+    let frame = window.requestAnimationFrame(() =>
+      setLayout(layouter(nodes, layout, {...options.layout, bounds: options.bounds}))
+    );
     return () => window.cancelAnimationFrame(frame);
   });
 
   if (layout) {
     return (
       <PanZoomSVG>
+        <Grid options={options.grid}/>
         <DragContext>
           {renderConnections(nodes, layout)}
-          {render(nodes, layout, setLayout)}
+          {render(nodes, layout, setLayout, options)}
         </DragContext>
       </PanZoomSVG>
     );

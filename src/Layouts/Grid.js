@@ -22,8 +22,8 @@ export const defaults = {
   coolingFactor: 0.99
 };
 
-export default (graph, layout, options) => {
-  options = _.defaultsDeep(options, defaults);
+export default (graph, layout, customOptions) => {
+  let options = _.defaultsDeep(customOptions, defaults);
   let random = () => Math.random();
   
   /* Calculate the repulsive force between nodes, based on 
@@ -123,9 +123,8 @@ export default (graph, layout, options) => {
           Math.min(length(velocities[key]), options.maxVelocity)
         )
       ); 
-      let node = graph[key];
-      position.x = Math.min(options.bounds.width - node.graphics.bounds.width, Math.max(options.bounds.x, position.x));
-      position.y = Math.min(options.bounds.height - node.graphics.bounds.height, Math.max(options.bounds.y, position.y));
+      position.x = Math.min(options.bounds.width, Math.max(options.bounds.x, position.x));
+      position.y = Math.min(options.bounds.height, Math.max(options.bounds.y, position.y));
       if(!_.includes(startNodes, key)){
         acc[key] = position;
       } else {

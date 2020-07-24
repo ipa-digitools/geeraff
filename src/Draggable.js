@@ -43,6 +43,10 @@ export default (props) => {
   const mouseMove = (event) => {
     event.preventDefault();
     event.stopPropagation();
+    let grid = props.grid;
+    if(!grid) {
+      grid = {x: 1, y: 1};
+    }
     if (!mousePosition) {
       mousePosition = { x: event.clientX, y: event.clientY };
     }
@@ -58,8 +62,8 @@ export default (props) => {
         y: currentPosition.y - oldPosition.y,
       };
       let newPosition = {
-        x: initialPosition.x + offset.x,
-        y: initialPosition.y + offset.y,
+        x: Math.floor((initialPosition.x + offset.x) / grid.x) * grid.x,
+        y: Math.floor((initialPosition.y + offset.y) / grid.y) * grid.y,
       };
 
       props.moved && props.moved(newPosition, offset);

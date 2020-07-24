@@ -6,10 +6,11 @@
   "author": "Greg Rauhoeft <greg.rauhoeft@ipa.fraunhofer.de>",
   "license": "MIT",
   "dependencies": {
+    "gradient-path": "^2.1.0",
     "lodash": "^4.17.19",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
-    "react-scripts": "3.0.1"
+    "react-scripts": "^3.4.1"
   },
   "scripts": {
     "start": "react-scripts start",
